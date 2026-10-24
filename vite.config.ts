@@ -27,6 +27,9 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
+        // Yeni sürüm beklemeden devreye girsin: ana ekrandaki uygulama hiç tam kapanmayabiliyor
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
       },
     }),
