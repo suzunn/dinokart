@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { googleAyikla, myMemoryAyikla } from './ceviri'
+import { googleAyikla, myMemoryAyikla, sozlukAyikla } from './ceviri'
 
 describe('Google yanıtı', () => {
   it('ana anlam ve sözlük alternatifleri (window)', () => {
@@ -50,5 +50,20 @@ describe('MyMemory yanıtı', () => {
       ana: 'Pencereyi kapatıyorum.',
       secenekler: [],
     })
+  })
+})
+
+describe('sözlük yanıtı', () => {
+  it('ilk anlam ana, sonrakiler seçenek (en fazla 4)', () => {
+    expect(sozlukAyikla({ kaynak: 'Netzverb', anlamlar: ['pencere', 'cam', 'camekan', 'vitrin', 'açıklık', 'fazla'] })).toEqual({
+      ana: 'pencere',
+      secenekler: ['cam', 'camekan', 'vitrin', 'açıklık'],
+      kaynak: 'Netzverb',
+    })
+  })
+  it("boş ya da bozuk yanıtta Google'a düşülsün diye null", () => {
+    expect(sozlukAyikla({ kaynak: 'Wiktionary', anlamlar: [] })).toBeNull()
+    expect(sozlukAyikla({ error: 'x' })).toBeNull()
+    expect(sozlukAyikla(null)).toBeNull()
   })
 })

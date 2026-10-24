@@ -6,12 +6,11 @@ Adres: https://suzunn.github.io/dinokart/
 
 ## Ne yapıyor
 
-- **Ekle:** dil seç, kelimeyi yaz (Almanca/Fransızcada artikeliyle). Türkçesi Google Çeviri'nin
-  anahtarsız uç noktasından (`translate.googleapis.com`, resmi olmayan) sözlük alternatifleriyle kendiliğinden
-  gelir; düzeltilebilir, alternatifler dokunarak seçilir, elle yazılan anlamın üstüne asla yazılmaz.
-  Örnek cümleyi uygulama [Tatoeba](https://tatoeba.org)'dan bulur; Türkçesi yoksa o da çevrilir (Google,
-  olmazsa [MyMemory](https://mymemory.translated.net)). MyMemory tek kelimede kullanılmaz, "window"a "açar" diyor.
-  "Başka cümle" ile değiştirilir, "Kendim yazayım" ile elle yazılır.
+- **Ekle:** dil seç, kelimeyi yaz (Almanca/Fransızcada artikeliyle). Türkçesi önce sözlükten gelir
+  (İngilizce Wiktionary, Almanca Netzverb, Fransızca Wiktionnaire), sözlükte yoksa Google Çeviri'den. Kutu
+  düzeltilebilir, alternatifler dokunarak seçilir, elle yazılan anlamın üstüne asla yazılmaz. Örnek cümleyi
+  [Tatoeba](https://tatoeba.org) verir; Türkçesi yoksa o da çevrilir (Google, olmazsa MyMemory).
+  Tureng denendi ama Cloudflare bot koruması otomatik istekleri geri çeviriyor.
 - **Kart:** önde kelime + altında cümle (kelime vurgulu), arkada Türkçesi. Dokun = çevir.
   Sağa kaydır = bildim, sola = tekrar gelsin. Hoparlör = telefonun sesiyle okuma.
 - **Artikel renkleri:** der/le mavi, die/la kırmızı, das yeşil.
@@ -20,7 +19,9 @@ Adres: https://suzunn.github.io/dinokart/
 - **Seri:** art arda çalışılan gün sayısı.
 - **Duocards'tan aktar:** app.duocards.com'dan (tarayıcıdan) inen CSV, Kelimeler sekmesinden yüklenir.
   Ayırıcı, başlık ve sütunlar tahmin edilir, önizlemede düzeltilir; kayıtlı kelimeler atlanır; yeni kartlar
-  günde 20 tane açılır. "Cümlelerini bul" cümlesi olmayan kartlara sırayla cümle ve çeviri bulur.
+  günde 20/50/100 tane açılır. Duocards'ta anlamı İngilizce yazılmış kartlar (Türkçeye özgü harf yoksa)
+  işaretlenir; "Eksikleri tamamla" (aktarmadan sonra kendiliğinden başlar) bunların Türkçesini bulur, İngilizcesi
+  notta kalır, cümlesi olmayanlara da cümle bulur.
 - **Yedek:** veri sadece telefonda (localStorage). Kelimeler sekmesinden JSON yedek alınır/yüklenir.
 
 ## Geliştirme
@@ -33,5 +34,9 @@ npm run build
 ```
 
 `main`'e her push GitHub Actions ile Pages'e yayınlanır (`.github/workflows/yayinla.yml`).
+
+Sözlük sunucusu ayrı: Netlify'da `dinokart-sozluk` sitesi, tek fonksiyon `netlify/functions/sozluk.mjs`
+(`/api/sozluk?dil=en|de|fr&q=...`), ayıklayıcılar `netlify/sozluk-ayikla.mjs`. Yayın:
+`npx netlify-cli deploy --prod` (ayar `netlify.toml`). Sunucu çalışmazsa uygulama Google'a düşer.
 Kod: `src/kart.ts` (model + tekrar mantığı), `src/cumle.ts` (Tatoeba), `src/ses.ts`, `src/depo.ts`,
 ekranlar `src/App.tsx`, `src/Calisma.tsx`, `src/Form.tsx`, `src/KartYuz.tsx`.

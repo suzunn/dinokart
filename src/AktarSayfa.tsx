@@ -1,6 +1,6 @@
 // Duocards (ya da Anki/Excel) CSV dosyasından kelime aktarma sayfası.
 import { useMemo, useRef, useState } from 'react'
-import { AKTARMA_GUNLUK, eslesmeTahmin, metneCevir, satirlariAl, tabloyaCevir, type AktarilacakSatir, type Eslesme, type Tablo } from './aktar'
+import { AKTARMA_GUNLUK_SECENEK, eslesmeTahmin, ingilizceGibi, metneCevir, satirlariAl, tabloyaCevir, type AktarilacakSatir, type Eslesme, type Tablo } from './aktar'
 import { Kelime } from './KartYuz'
 import { DILLER, DIL_SIRASI, type Dil, type Kart } from './kart'
 
@@ -12,13 +12,15 @@ export default function AktarSayfa({
   kapat,
 }: {
   kartlar: Kart[]
-  aktar: (satirlar: AktarilacakSatir[], dil: Dil) => void
+  aktar: (satirlar: AktarilacakSatir[], dil: Dil, gunluk: number, turkceyeCevir: boolean) => void
   kapat: () => void
 }) {
   const [tablo, setTablo] = useState<Tablo | null>(null)
   const [eslesme, setEslesme] = useState<Eslesme>({ kelime: 0, anlam: 1, cumle: -1 })
   const [dil, setDil] = useState<Dil | null>(null)
   const [hata, setHata] = useState<string | null>(null)
+  const [gunluk, setGunluk] = useState(AKTARMA_GUNLUK_SECENEK[0])
+  const [turkceyeCevir, setTurkceyeCevir] = useState(true)
   const dosyaEl = useRef<HTMLInputElement>(null)
 
   const dosyaOku = async (f: File) => {
@@ -63,7 +65,8 @@ export default function AktarSayfa({
     </select>
   )
 
-  const gun = Math.ceil(yeni.length / AKTARMA_GUNLUK)
+  const gun = Math.ceil(yeni.length / gunluk)
+  const ingilizceSay = dil && dil !== 'en' ? yeni.filter(r => ingilizceGibi(r.anlam)).length : 0
 
   return (
     <div className="aktar">
@@ -149,16 +152,39 @@ export default function AktarSayfa({
           <p className="alan-not">
             {satirlar.length} kelime bulundu
             {dil && satirlar.length !== yeni.length && <>, {satirlar.length - yeni.length} tanesi zaten var (atlanacak)</>}.
-            {yeni.length > AKTARMA_GUNLUK && (
-              <> Önüne yığılmasın diye her gün {AKTARMA_GUNLUK} yenisi açılır, hepsi {gun} günde gelir.</>
-            )}
           </p>
+
+          {ingilizceSay > 0 && (
+            <label className="secim">
+              <input type="checkbox" checked={turkceyeCevir} onChange={e => setTurkceyeCevir(e.target.checked)} />
+              <span>
+                Anlamı İngilizce görünen {ingilizceSay} kelimenin Türkçesini bul. İngilizcesi kartın notunda kalır.
+              </span>
+            </label>
+          )}
+
+          {yeni.length > AKTARMA_GUNLUK_SECENEK[0] && (
+            <div className="alan">
+              <span className="alan-ad">Günde kaç yeni kart açılsın?</span>
+              <div className="dil-sec">
+                {AKTARMA_GUNLUK_SECENEK.map(n => (
+                  <button type="button" key={n} className={'dil-hap' + (gunluk === n ? ' secili koyu' : '')} onClick={() => setGunluk(n)}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <span className="alan-not">
+                Hepsi bir günde önüne yığılmasın diye kartlar sırayla açılır: bu ayarla {gun} günde hepsi gelir. Bildiğin
+                kelimeleri sağa kaydırınca uzun süre bir daha çıkmaz.
+              </span>
+            </div>
+          )}
 
           <div className="form-alt">
             <button type="button" className="dugme ikincil" onClick={kapat}>
               Vazgeç
             </button>
-            <button type="button" className="dugme ana" disabled={!dil || !yeni.length} onClick={() => dil && aktar(yeni, dil)}>
+            <button type="button" className="dugme ana" disabled={!dil || !yeni.length} onClick={() => dil && aktar(yeni, dil, gunluk, turkceyeCevir && ingilizceSay > 0)}>
               {dil ? `${yeni.length} kelimeyi ekle` : 'Önce dili seç'}
             </button>
           </div>

@@ -1,12 +1,16 @@
-// Türkçe öneri. Kelimeler Google Çeviri'nin herkese açık uç noktasından (sözlük alternatifleriyle) gelir;
-// cümlede Google yanıt vermezse MyMemory (mymemory.translated.net) yedek olarak denenir.
+// Türkçe öneri. Kelimeler önce sözlükten gelir (Netlify'daki /api/sozluk: İngilizce Wiktionary, Almanca Netzverb,
+// Fransızca Wiktionnaire); sözlükte yoksa Google Çeviri'nin herkese açık uç noktasından (sözlük alternatifleriyle).
+// Cümlede Google yanıt vermezse MyMemory (mymemory.translated.net) yedek olarak denenir.
 // MyMemory tek kelimede kullanılmaz: yazılım menülerinden öğrenmiş, "window"a "açar" diyor.
 import { DILLER, kok, type Dil } from './kart'
 
 export interface Ceviri {
   ana: string
   secenekler: string[] // ana dışındaki kısa alternatifler
+  kaynak?: string
 }
+
+export const SOZLUK_URL = 'https://dinokart-sozluk.netlify.app/api/sozluk'
 
 const SECENEK_TAVAN = 4
 
@@ -67,6 +71,26 @@ async function google(q: string, dil: Dil, kelimeMi: boolean, sinyal?: AbortSign
   return null
 }
 
+/* ---------- sözlük (Netlify) ---------- */
+
+export function sozlukAyikla(y: unknown): Ceviri | null {
+  const g = y as { kaynak?: string; anlamlar?: unknown }
+  const anlamlar = Array.isArray(g?.anlamlar) ? g.anlamlar.filter((a): a is string => typeof a === 'string' && !!a.trim()) : []
+  if (!anlamlar.length) return null
+  return { ana: anlamlar[0].trim(), secenekler: anlamlar.slice(1, 1 + SECENEK_TAVAN).map(a => a.trim()), kaynak: g.kaynak }
+}
+
+async function sozluk(q: string, dil: Dil, sinyal?: AbortSignal): Promise<Ceviri | null> {
+  try {
+    const p = new URLSearchParams({ dil, q })
+    const res = await fetch(`${SOZLUK_URL}?${p}`, { signal: sinyal ?? AbortSignal.timeout(7000) })
+    return res.ok ? sozlukAyikla(await res.json()) : null
+  } catch (e) {
+    if (sinyal?.aborted) throw e
+    return null // sunucu yoksa ya da yavaşsa Google'a düşülür
+  }
+}
+
 /* ---------- MyMemory (yalnızca cümle yedeği) ---------- */
 
 interface MyMemoryYanit {
@@ -95,8 +119,12 @@ export async function cevir(metin: string, dil: Dil, kelimeMi: boolean, sinyal?:
   if (!q) return null
   if (!kelimeMi) return (await google(q, dil, false, sinyal)) ?? (await myMemory(q, dil, sinyal))
 
+  const s = await sozluk(q, dil, sinyal)
+  if (s) return s
+
   // Ana anlam artikeliyle/"to" ile sorulur (daha doğru), sözlük alternatifleri gerekirse çıplak kökten alınır
   const c = await google(q, dil, true, sinyal)
+  if (c) c.kaynak = 'Google Çeviri'
   const k = kok(q, dil)
   if (c && !c.secenekler.length && k && k !== q) {
     const kokten = await google(k, dil, true, sinyal)

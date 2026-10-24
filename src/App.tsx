@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import AktarSayfa from './AktarSayfa'
-import { AKTARMA_GUNLUK, type AktarilacakSatir } from './aktar'
+import { ingilizceGibi, type AktarilacakSatir } from './aktar'
 import Calisma from './Calisma'
 import { cevir } from './ceviri'
 import { cumleBul } from './cumle'
@@ -66,50 +66,76 @@ export default function App() {
     bildir(`Kaydedildi: ${a.kelime}`)
   }
 
-  // İçe aktarılan kartlar günde AKTARMA_GUNLUK tanesi açılacak şekilde sıraya konur
-  const topluEkle = (satirlar: AktarilacakSatir[], dil: Dil) => {
+  // İçe aktarılan kartlar günde `gunluk` tanesi açılacak şekilde sıraya konur. Anlamı İngilizce görünenler
+  // işaretlenir; eksik tamamlama onları Türkçeye çevirir.
+  const topluEkle = (satirlar: AktarilacakSatir[], dil: Dil, gunluk: number, turkceyeCevir: boolean) => {
     const simdi = Date.now()
     setVeri(v => {
       let no = v.kartlar.reduce((m, k) => Math.max(m, k.no), 0)
       const yeni = satirlar.map((r, i) => ({
         ...yeniKart({ dil, kelime: r.kelime, anlam: r.anlam, cumle: r.cumle }, ++no, simdi + i),
-        sonraki: i < AKTARMA_GUNLUK ? simdi : gunEkle(simdi, Math.floor(i / AKTARMA_GUNLUK)),
+        sonraki: i < gunluk ? simdi : gunEkle(simdi, Math.floor(i / gunluk)),
+        ...(turkceyeCevir && ingilizceGibi(r.anlam) ? { ceviriBekliyor: true } : {}),
       }))
       return { ...v, sonDil: dil, kartlar: [...v.kartlar, ...yeni] }
     })
     setAktarAcik(false)
+    setTamamlaBaslat(true)
     bildir(`${satirlar.length} kelime eklendi`)
   }
 
-  // Cümlesi olmayan kartlara sırayla (sitelere yüklenmeden) cümle ve çevirisi bulunur
-  const cumleleriBul = async () => {
-    if (cumleIsi) return
-    const hedef = veriRef.current.kartlar.filter(k => !k.cumle).map(k => k.id)
-    setCumleIsi({ bitti: 0, toplam: hedef.length })
-    let bulunan = 0
-    for (let i = 0; i < hedef.length; i++) {
-      const k = veriRef.current.kartlar.find(x => x.id === hedef[i])
-      if (k && !k.cumle) {
+  // Eksik tamamlama: cümlesi olmayan karta cümle (ve çevirisi), anlamı İngilizce kalan karta Türkçesi.
+  // Sırayla ve aralıklı gider ki sitelere yüklenmesin; yarıda kalırsa düğmeyle devam edilir.
+  const tamamlaniyor = useRef(false)
+  const eksik = (k: Kart) => !k.cumle || !!k.ceviriBekliyor
+  const eksikleriTamamla = async () => {
+    if (tamamlaniyor.current) return
+    tamamlaniyor.current = true
+    const denenen = new Set<string>()
+    let bitti = 0
+    let duzelen = 0
+    const kalan = () => veriRef.current.kartlar.filter(k => eksik(k) && !denenen.has(k.id))
+    // Aktarma sürerken eklenen yeni dosyanın kartları da aynı işte toplanır
+    for (let sira = kalan(); sira.length; sira = kalan()) {
+      for (const k of sira) {
+        denenen.add(k.id)
+        setCumleIsi({ bitti, toplam: bitti + kalan().length + 1 })
+        const degisim: Partial<Kart> = {}
         try {
-          const aday = (await cumleBul(k.kelime, k.dil))[0]
-          if (aday) {
-            const ceviri = aday.ceviri ?? (await cevir(aday.cumle, k.dil, false).catch(() => null))?.ana
-            bulunan++
-            setVeri(v => ({
-              ...v,
-              kartlar: v.kartlar.map(x => (x.id === k.id && !x.cumle ? { ...x, cumle: aday.cumle, cumleTr: ceviri, guncelleme: Date.now() } : x)),
-            }))
+          if (k.ceviriBekliyor) {
+            const c = await cevir(k.kelime, k.dil, true)
+            if (c) Object.assign(degisim, { anlam: c.ana, not: [k.not, 'Duocards: ' + k.anlam].filter(Boolean).join('\n'), ceviriBekliyor: undefined })
+          }
+          if (!k.cumle) {
+            const aday = (await cumleBul(k.kelime, k.dil))[0]
+            if (aday) {
+              const ceviri = aday.ceviri ?? (await cevir(aday.cumle, k.dil, false).catch(() => null))?.ana
+              Object.assign(degisim, { cumle: aday.cumle, cumleTr: ceviri })
+            }
           }
         } catch {
-          // internet yoksa ya da site yanıt vermezse o kart atlanır
+          // internet yoksa ya da site yanıt vermezse o kart bu sefer atlanır
         }
-        await new Promise(r => setTimeout(r, 350))
+        if (Object.keys(degisim).length) {
+          duzelen++
+          setVeri(v => ({ ...v, kartlar: v.kartlar.map(x => (x.id === k.id ? { ...x, ...degisim, guncelleme: Date.now() } : x)) }))
+        }
+        bitti++
+        await new Promise(r => setTimeout(r, 300))
       }
-      setCumleIsi({ bitti: i + 1, toplam: hedef.length })
     }
+    tamamlaniyor.current = false
     setCumleIsi(null)
-    bildir(`${bulunan} karta cümle bulundu`)
+    bildir(`${duzelen} kart tamamlandı`)
   }
+
+  // Aktarmadan sonra kayıt ekrana yansıyınca tamamlama kendiliğinden başlar
+  const [tamamlaBaslat, setTamamlaBaslat] = useState(false)
+  useEffect(() => {
+    if (!tamamlaBaslat) return
+    setTamamlaBaslat(false)
+    eksikleriTamamla()
+  })
 
   const guncelle = (id: string, a: FormAlani) => {
     setVeri(v => ({
@@ -162,7 +188,7 @@ export default function App() {
             bildir={bildir}
             aktarAc={() => setAktarAcik(true)}
             cumleIsi={cumleIsi}
-            cumleleriBul={cumleleriBul}
+            eksikleriTamamla={eksikleriTamamla}
           />
         )}
       </main>
@@ -341,7 +367,7 @@ function Liste({
   bildir,
   aktarAc,
   cumleIsi,
-  cumleleriBul,
+  eksikleriTamamla,
 }: {
   veri: Veri
   sec: (k: Kart) => void
@@ -349,9 +375,10 @@ function Liste({
   bildir: (m: string) => void
   aktarAc: () => void
   cumleIsi: { bitti: number; toplam: number } | null
-  cumleleriBul: () => void
+  eksikleriTamamla: () => void
 }) {
   const cumlesiz = veri.kartlar.filter(k => !k.cumle).length
+  const ingilizce = veri.kartlar.filter(k => k.ceviriBekliyor).length
   const [ara, setAra] = useState('')
   const [dil, setDil] = useState<Dil | 'hepsi'>('hepsi')
   const dosyaEl = useRef<HTMLInputElement>(null)
@@ -420,12 +447,13 @@ function Liste({
             Duocards'tan aktar
           </button>
         </div>
-        {(cumleIsi || cumlesiz > 0) && (
+        {(cumleIsi || cumlesiz > 0 || ingilizce > 0) && (
           <div className="cumle-isi">
             {cumleIsi ? (
               <>
                 <p role="status">
-                  Cümleler aranıyor: {cumleIsi.bitti}/{cumleIsi.toplam}. Bu sırada uygulamayı kullanabilirsin, sadece kapatma.
+                  Kartlar tamamlanıyor: {cumleIsi.bitti}/{cumleIsi.toplam}. Bu sırada uygulamayı kullanabilirsin, sadece kapatma;
+                  kapanırsa kaldığı yerden devam ettirebilirsin.
                 </p>
                 <div className="ilerleme" aria-hidden="true">
                   <i style={{ width: (cumleIsi.bitti / Math.max(cumleIsi.toplam, 1)) * 100 + '%' }} />
@@ -433,9 +461,14 @@ function Liste({
               </>
             ) : (
               <>
-                <p>{cumlesiz} kartın örnek cümlesi yok.</p>
-                <button className="dugme ikincil" onClick={cumleleriBul}>
-                  Cümlelerini bul
+                <p>
+                  {[cumlesiz > 0 && `${cumlesiz} kartın örnek cümlesi yok`, ingilizce > 0 && `${ingilizce} kartın anlamı İngilizce`]
+                    .filter(Boolean)
+                    .join(', ')}
+                  .
+                </p>
+                <button className="dugme ikincil" onClick={eksikleriTamamla}>
+                  Eksikleri tamamla
                 </button>
               </>
             )}

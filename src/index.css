@@ -1030,3 +1030,21 @@ button {
   width: 100%;
   flex: none;
 }
+.dil-hap.secili.koyu {
+  background: var(--murekkep);
+  border-color: var(--murekkep);
+  color: var(--zemin);
+}
+.secim {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.93rem;
+}
+.secim input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--murekkep);
+  flex-shrink: 0;
+}

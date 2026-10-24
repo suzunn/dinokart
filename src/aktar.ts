@@ -66,7 +66,8 @@ export function ayiriciBul(metin: string): string {
 
 const BASLIK_KELIME = /^(front|word|term|kelime|wort|mot|vocab|vocabulary|expression|source|question|ön|on|original)$/i
 const BASLIK_ANLAM = /^(back|translation|meaning|definition|anlam|türkçe|turkce|çeviri|ceviri|answer|target|arka|bedeutung|traduction)$/i
-const BASLIK_CUMLE = /^(example|sentence|example sentence|cümle|cumle|örnek|ornek|context|beispiel|exemple|note|notes)$/i
+const BASLIK_CUMLE = /^(hint|example|sentence|example sentence|cümle|cumle|örnek|ornek|context|beispiel|exemple|note|notes)$/i
+const BASLIK_TARIH = /^(publishedat|createdat|created|date|added|tarih)$/i
 
 export function tabloyaCevir(metin: string): Tablo {
   const temiz = metin.replace(/^﻿/, '')
@@ -97,8 +98,11 @@ export interface AktarilacakSatir {
   cumle?: string
 }
 
+// Tarih sütunu varsa (Duocards: publishedAt, en yeni üstte) eskiden yeniye sıralanır; numaralar ekleme sırasını korusun
 export function satirlariAl(t: Tablo, e: Eslesme): AktarilacakSatir[] {
-  return t.satirlar
+  const tarih = t.baslik ? t.baslik.findIndex(h => BASLIK_TARIH.test(h)) : -1
+  const sirali = tarih >= 0 ? [...t.satirlar].sort((a, b) => (Date.parse(a[tarih]) || 0) - (Date.parse(b[tarih]) || 0)) : t.satirlar
+  return sirali
     .map(r => ({
       kelime: (r[e.kelime] ?? '').trim(),
       anlam: (r[e.anlam] ?? '').trim(),
@@ -114,5 +118,13 @@ export function metneCevir(veri: ArrayBuffer): string {
   return new TextDecoder('windows-1252').decode(veri)
 }
 
-// Yeni kartlar günde bu kadar açılır; 300 kelime bir günde önüne yığılmasın
-export const AKTARMA_GUNLUK = 20
+// Yeni kartlar günde bu kadar açılır; yüzlerce kelime bir günde önüne yığılmasın
+export const AKTARMA_GUNLUK_SECENEK = [20, 50, 100]
+
+// Duocards'ta anlamlar çoğu zaman İngilizce yazılmış ("wine", "multiple"). Türkçeye özgü harf içermeyen anlam
+// İngilizce sayılır; "ev" gibi o harfleri içermeyen Türkçe anlam da çevrilir ama sonuç zaten aynı çıkar ve
+// eski anlam kartın notunda saklanır.
+export function ingilizceGibi(anlam: string): boolean {
+  const t = anlam.trim()
+  return !!t && /\p{L}/u.test(t) &&!/[çğıöşüâîûÇĞİÖŞÜÂÎÛ]/.test(t)
+}

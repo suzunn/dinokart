@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ayiriciBul, csvOku, eslesmeTahmin, satirlariAl, tabloyaCevir } from './aktar'
+import { ayiriciBul, csvOku, eslesmeTahmin, ingilizceGibi, satirlariAl, tabloyaCevir } from './aktar'
 
 describe('csv okuma', () => {
   it('tırnak, içte virgül ve satır sonu, "" kaçışı', () => {
@@ -23,6 +23,18 @@ describe('csv okuma', () => {
 })
 
 describe('tablo ve eşleme', () => {
+  it('Duocards dışa aktarımı: hint = cümle, eskiden yeniye', () => {
+    const t = tabloyaCevir(
+      'front,back,hint,publishedAt\n"deity","Tanrı","The Greeks had many ""deities"".","2025-02-10T19:15:44.105Z"\n"to fret","üzülmek","","2023-03-12T16:48:31.121Z"\n',
+    )
+    const e = eslesmeTahmin(t)
+    expect(e).toEqual({ kelime: 0, anlam: 1, cumle: 2 })
+    expect(satirlariAl(t, e)).toEqual([
+      { kelime: 'to fret', anlam: 'üzülmek', cumle: undefined },
+      { kelime: 'deity', anlam: 'Tanrı', cumle: 'The Greeks had many "deities".' },
+    ])
+  })
+
   it('başlıklı Duocards benzeri dosya, BOM ile', () => {
     const t = tabloyaCevir('﻿front,back,example\nla maison,ev,Je rentre à la maison.\nle chat,kedi,')
     expect(t.baslik).toEqual(['front', 'back', 'example'])
@@ -47,5 +59,16 @@ describe('tablo ve eşleme', () => {
     expect(eslesmeTahmin(cumleli).cumle).toBe(2)
     const etiketli = tabloyaCevir('a,b,noun\nc,d,verb\ne,f,noun')
     expect(eslesmeTahmin(etiketli).cumle).toBe(-1)
+  })
+})
+
+describe('İngilizce anlam', () => {
+  it('Türkçe harfi olmayan anlam İngilizce sayılır', () => {
+    expect(ingilizceGibi('wine')).toBe(true)
+    expect(ingilizceGibi('indeed, actually')).toBe(true)
+    expect(ingilizceGibi('dissuade from,vazgeçirmek')).toBe(false)
+    expect(ingilizceGibi('üzülmek')).toBe(false)
+    expect(ingilizceGibi('İnatçı')).toBe(false)
+    expect(ingilizceGibi('')).toBe(false)
   })
 })

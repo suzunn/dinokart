@@ -42,6 +42,7 @@ export default function Form({
   const [anlam, setAnlam] = useState(kart?.anlam ?? '')
   const [anlamOto, setAnlamOto] = useState(false) // anlam çeviriden geldi ve henüz elle değiştirilmedi
   const [secenekler, setSecenekler] = useState<string[]>([])
+  const [anlamKaynak, setAnlamKaynak] = useState<string | undefined>()
   const [cevriliyor, setCevriliyor] = useState(false)
   const [cumle, setCumle] = useState<CumleAdayi | null>(kart?.cumle ? { cumle: kart.cumle, ceviri: kart.cumleTr } : null)
   const [adaylar, setAdaylar] = useState<CumleAdayi[]>([])
@@ -98,6 +99,7 @@ export default function Form({
       setAnlam(c.ana)
       setAnlamOto(true)
       setSecenekler(c.secenekler)
+      setAnlamKaynak(c.kaynak)
     } catch {
       // çeviri gelmezse Elif kendisi yazar; ayrıca uyarı gerekmez
     } finally {
@@ -249,7 +251,9 @@ export default function Form({
       </label>
       {anlamOto && (
         <div className="oneri">
-          <span className="alan-not">Otomatik çeviri, istersen düzelt{secenekler.length ? ' ya da seç:' : '.'}</span>
+          <span className="alan-not">
+            {anlamKaynak ? `Kaynak: ${anlamKaynak}. ` : ''}İstersen düzelt{secenekler.length ? ' ya da seç:' : '.'}
+          </span>
           {secenekler.map(s => (
             <button
               type="button"

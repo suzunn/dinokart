@@ -19,6 +19,7 @@ export interface Kart {
   sonraki: number // bu andan itibaren tekrar zamanı gelmiş sayılır
   dogru: number
   yanlis: number
+  ceviriBekliyor?: boolean // başka uygulamadan anlamı İngilizce geldi; eksik tamamlama Türkçeye çevirecek
 }
 
 export const DILLER: Record<Dil, { ad: string; bayrak: string; ses: string; tatoeba: string }> = {

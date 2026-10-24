@@ -1,0 +1,5 @@
+# Yalnızca sözlük sunucusu (dinokart-sozluk.netlify.app). Uygulamanın kendisi GitHub Pages'te.
+[build]
+  command = "echo sozluk"
+  publish = "netlify/yayin"
+  functions = "netlify/functions"
