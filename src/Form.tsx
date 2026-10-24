@@ -1,5 +1,6 @@
-// Kelime ekleme ve düzenleme formu. Kelime yazılınca örnek cümle kendiliğinden aranır.
+// Kelime ekleme ve düzenleme formu. Kelime yazılınca Türkçesi ve örnek cümle kendiliğinden gelir.
 import { useEffect, useRef, useState } from 'react'
+import { cevir } from './ceviri'
 import { cumleBul } from './cumle'
 import { Cumle, Kelime, SesDugmesi } from './KartYuz'
 import { DILLER, DIL_SIRASI, type CumleAdayi, type Dil, type Kart } from './kart'
@@ -39,6 +40,9 @@ export default function Form({
   const [dil, setDil] = useState<Dil>(kart?.dil ?? ilkDil)
   const [kelime, setKelime] = useState(kart?.kelime ?? '')
   const [anlam, setAnlam] = useState(kart?.anlam ?? '')
+  const [anlamOto, setAnlamOto] = useState(false) // anlam çeviriden geldi ve henüz elle değiştirilmedi
+  const [secenekler, setSecenekler] = useState<string[]>([])
+  const [cevriliyor, setCevriliyor] = useState(false)
   const [cumle, setCumle] = useState<CumleAdayi | null>(kart?.cumle ? { cumle: kart.cumle, ceviri: kart.cumleTr } : null)
   const [adaylar, setAdaylar] = useState<CumleAdayi[]>([])
   const [arama, setArama] = useState<Arama>(kart?.cumle ? 'bulundu' : 'bos')
@@ -49,21 +53,23 @@ export default function Form({
   const kelimeEl = useRef<HTMLInputElement>(null)
   const aramaKimligi = useRef(0)
   const arananKelime = useRef(kart ? kart.dil + kart.kelime : '')
+  const cevrilenKelime = useRef(kart ? kart.dil + kart.kelime : '')
+  const cumleCevirileri = useRef(new Map<string, string>())
 
   const temiz = kelime.trim()
   const ayni = temiz
     ? kartlar.find(k => k.id !== kart?.id && k.dil === dil && k.kelime.trim().toLocaleLowerCase() === temiz.toLocaleLowerCase())
     : undefined
 
-  const cumleAra = async (zorla = false) => {
+  const cumleAra = async (zorla = false, d = dil) => {
     if (!temiz || elle) return
-    const anahtar = dil + temiz
+    const anahtar = d + temiz
     if (!zorla && arananKelime.current === anahtar) return
     arananKelime.current = anahtar
     const kimlik = ++aramaKimligi.current
     setArama('araniyor')
     try {
-      const sonuc = await cumleBul(temiz, dil)
+      const sonuc = await cumleBul(temiz, d)
       if (kimlik !== aramaKimligi.current) return
       setAdaylar(sonuc)
       setCumle(sonuc[0] ?? null)
@@ -74,17 +80,73 @@ export default function Form({
     }
   }
 
-  // Dil değişince eski dildeki cümle artık geçersiz
-  useEffect(() => {
-    if (!kart || dil !== kart.dil) {
-      if (arananKelime.current && !arananKelime.current.startsWith(dil)) {
-        setCumle(null)
-        setAdaylar([])
-        setArama('bos')
-        arananKelime.current = ''
-      }
+  // Çeviri yoldayken anlam elle yazılırsa sonuç onun üstüne yazmasın diye güncel değer
+  const anlamSon = useRef({ anlam, oto: anlamOto })
+  anlamSon.current = { anlam, oto: anlamOto }
+
+  // Elle yazılmış bir anlamın üstüne asla yazılmaz
+  const anlamBul = async (zorla = false, d = dil) => {
+    if (!temiz || (anlam.trim() && !anlamOto)) return
+    const anahtar = d + temiz
+    if (!zorla && cevrilenKelime.current === anahtar) return
+    cevrilenKelime.current = anahtar
+    setCevriliyor(true)
+    try {
+      const c = await cevir(temiz, d, true)
+      if (cevrilenKelime.current !== anahtar || !c) return
+      if (anlamSon.current.anlam.trim() && !anlamSon.current.oto) return
+      setAnlam(c.ana)
+      setAnlamOto(true)
+      setSecenekler(c.secenekler)
+    } catch {
+      // çeviri gelmezse Elif kendisi yazar; ayrıca uyarı gerekmez
+    } finally {
+      if (cevrilenKelime.current === anahtar) setCevriliyor(false)
     }
-  }, [dil, kart])
+  }
+  const kelimeBitti = () => {
+    cumleAra()
+    anlamBul()
+  }
+
+  // Dil değişince eski dildeki cümle ve otomatik anlam geçersiz; yenisi aranır
+  const dilSec = (d: Dil) => {
+    if (d === dil) return
+    setDil(d)
+    setCumle(null)
+    setAdaylar([])
+    setArama('bos')
+    setElle(false)
+    arananKelime.current = ''
+    cevrilenKelime.current = ''
+    setSecenekler([])
+    if (anlamOto) {
+      setAnlam('')
+      setAnlamOto(false)
+    }
+    if (temiz) {
+      if (!elle) cumleAra(true, d)
+      anlamBul(true, d)
+    }
+  }
+
+  // Tatoeba'da Türkçesi olmayan cümle makine çevirisiyle tamamlanır
+  useEffect(() => {
+    const hedef = cumle?.cumle
+    if (!hedef || cumle?.ceviri || elle || arama !== 'bulundu') return
+    const onceki = cumleCevirileri.current.get(dil + hedef)
+    const yaz = (ceviri: string) => {
+      cumleCevirileri.current.set(dil + hedef, ceviri)
+      setCumle(c => (c && c.cumle === hedef && !c.ceviri ? { ...c, ceviri } : c))
+      setAdaylar(l => l.map(a => (a.cumle === hedef && !a.ceviri ? { ...a, ceviri } : a)))
+    }
+    if (onceki) return yaz(onceki)
+    const iptal = new AbortController()
+    cevir(hedef, dil, false, iptal.signal)
+      .then(c => c && yaz(c.ana))
+      .catch(() => {})
+    return () => iptal.abort()
+  }, [cumle?.cumle, cumle?.ceviri, elle, arama, dil])
 
   const baskaCumle = () => {
     if (!adaylar.length) return cumleAra(true)
@@ -107,6 +169,9 @@ export default function Form({
     if (!kart) {
       setKelime('')
       setAnlam('')
+      setAnlamOto(false)
+      setSecenekler([])
+      cevrilenKelime.current = ''
       setCumle(null)
       setAdaylar([])
       setArama('bos')
@@ -128,7 +193,7 @@ export default function Form({
             role="radio"
             aria-checked={dil === d}
             className={`dil-hap dil-${d}` + (dil === d ? ' secili' : '')}
-            onClick={() => setDil(d)}
+            onClick={() => dilSec(d)}
           >
             <span aria-hidden="true">{DILLER[d].bayrak}</span> {DILLER[d].ad}
           </button>
@@ -141,7 +206,7 @@ export default function Form({
           ref={kelimeEl}
           value={kelime}
           onChange={e => setKelime(e.target.value)}
-          onBlur={() => cumleAra()}
+          onBlur={kelimeBitti}
           placeholder={ORNEK[dil]}
           autoCapitalize="none"
           autoCorrect="off"
@@ -171,13 +236,34 @@ export default function Form({
         <span className="alan-ad">Türkçesi</span>
         <input
           value={anlam}
-          onChange={e => setAnlam(e.target.value)}
-          onFocus={() => cumleAra()}
-          placeholder="ör. pencere"
+          onChange={e => {
+            setAnlam(e.target.value)
+            setAnlamOto(false)
+          }}
+          onFocus={kelimeBitti}
+          placeholder={cevriliyor ? 'Çevriliyor…' : 'ör. pencere'}
           enterKeyHint="done"
           required
         />
       </label>
+      {anlamOto && (
+        <div className="oneri">
+          <span className="alan-not">Otomatik çeviri, istersen düzelt{secenekler.length ? ' ya da seç:' : '.'}</span>
+          {secenekler.map(s => (
+            <button
+              type="button"
+              key={s}
+              className="oneri-hap"
+              onClick={() => {
+                setAnlam(s)
+                setAnlamOto(false)
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="cumle-kutu">
         <div className="cumle-baslik">

@@ -709,6 +709,25 @@ button {
   color: var(--cins-f);
   font-weight: 600;
 }
+.oneri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: -6px;
+}
+.oneri .alan-not {
+  margin: 0;
+  width: 100%;
+}
+.oneri-hap {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--cizgi);
+  background: var(--kagit);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 
 .cumle-kutu {
   display: flex;

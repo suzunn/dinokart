@@ -6,9 +6,11 @@ Adres: https://suzunn.github.io/dinokart/
 
 ## Ne yapıyor
 
-- **Ekle:** dil seç, kelimeyi (Almanca/Fransızcada artikeliyle) ve Türkçesini yaz. Örnek cümleyi
-  uygulama [Tatoeba](https://tatoeba.org)'dan bulur, çoğu zaman Türkçe çevirisiyle. "Başka cümle" ile
-  değiştirilir, "Kendim yazayım" ile elle yazılır.
+- **Ekle:** dil seç, kelimeyi yaz (Almanca/Fransızcada artikeliyle). Türkçesi
+  [MyMemory](https://mymemory.translated.net)'den kendiliğinden gelir; düzeltilebilir, varsa alternatifleri
+  dokunarak seçilir, elle yazılan anlamın üstüne asla yazılmaz. Örnek cümleyi uygulama
+  [Tatoeba](https://tatoeba.org)'dan bulur; Türkçesi yoksa o da MyMemory ile çevrilir. "Başka cümle" ile
+  değiştirilir, "Kendim yazayım" ile elle yazılır. (MyMemory anahtarsız; günlük ücretsiz kotası var.)
 - **Kart:** önde kelime + altında cümle (kelime vurgulu), arkada Türkçesi. Dokun = çevir.
   Sağa kaydır = bildim, sola = tekrar gelsin. Hoparlör = telefonun sesiyle okuma.
 - **Artikel renkleri:** der/le mavi, die/la kırmızı, das yeşil.
