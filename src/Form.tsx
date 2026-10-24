@@ -228,7 +228,8 @@ export default function Form({
       )}
       {ayni && (
         <p className="uyari" role="status">
-          Bu kelime zaten var: Nº {ayni.no}, "{ayni.anlam}"
+          Bu kelimeyi daha önce eklemişsin (Nº {ayni.no}: {ayni.anlam}). Kaydedersen ikinci bir kart olur; eskisini
+          Kelimeler sekmesinden düzeltebilirsin.
         </p>
       )}
 
