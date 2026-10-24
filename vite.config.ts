@@ -9,6 +9,7 @@ export default defineConfig(({ command }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false, // kayıt src/main.tsx'te: yeni sürüm gelince sayfa kendiliğinden yenilensin
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'Dinokart',
