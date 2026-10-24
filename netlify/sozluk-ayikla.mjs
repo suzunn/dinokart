@@ -37,6 +37,8 @@ export function aramaKoku(kelime, dil) {
 
 /* ---------- Wiktionary (İngilizce) ---------- */
 
+const TURLER = /^(Verb|Noun|Proper noun|Adjective|Adverb|Pronoun|Preposition|Conjunction|Interjection|Phrase|Prepositional phrase|Idiom|Determiner|Numeral|Particle)$/
+
 // ==English== bölümündeki çeviri tablolarından {{t|tr|..}} / {{t+|tr|..}}; "to ..." ise yalnız Verb alt bölümleri
 export function wiktionaryAyikla(wikitext, fiil = false) {
   const bas = wikitext.search(/^==English==\s*$/m)
@@ -45,14 +47,20 @@ export function wiktionaryAyikla(wikitext, fiil = false) {
   const bolum = son < 0 ? wikitext.slice(bas) : wikitext.slice(bas, bas + 11 + son)
   const turkce = metin => [...metin.matchAll(/\{\{t\+?\|tr\|([^}|]+)/g)].map(m => m[1])
   if (fiil) {
+    // Çeviri tablosu "=====Translations=====" gibi bir alt başlıkta durur; o alt başlık üstteki sözcük türüne aittir
     const parcalar = bolum.split(/^(===+\s*[^=\n]+?\s*===+)\s*$/m)
     const fiiller = []
     let fiilBolumu = false
-    for (let i = 1; i < parcalar.length; i += 2)
-      if (/^=+\s*Verb\s*=+$/.test(parcalar[i])) {
+    let tur = ''
+    for (let i = 1; i < parcalar.length; i += 2) {
+      const ad = parcalar[i].replace(/=/g, '').trim()
+      if (TURLER.test(ad)) tur = ad
+      else if (/^(Etymology|Pronunciation)/i.test(ad)) tur = ''
+      if (tur === 'Verb') {
         fiilBolumu = true
         fiiller.push(...turkce(parcalar[i + 1] ?? ''))
       }
+    }
     // Fiil bölümü var ama Türkçesi yoksa isim anlamlarını vermek yanıltır ("to fret" -> "perde")
     if (fiilBolumu) return tekillestir(fiiller, 8)
   }

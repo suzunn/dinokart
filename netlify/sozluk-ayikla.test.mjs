@@ -19,6 +19,22 @@ describe('Wiktionary', () => {
   it('"to" ile yalnız Verb bölümü', () => {
     expect(wiktionaryAyikla(w, true)).toEqual(['üzülmek', 'pencere'])
   })
+  it('Translations alt başlığı üstteki fiile aittir (borrow)', () => {
+    const b = `==English==
+===Etymology===
+from Old English
+===Verb===
+{{en-verb}}
+====Translations====
+{{trans-top|to receive temporarily}}
+* Turkish: {{t+|tr|ödünç almak}}
+{{trans-bottom}}
+===Noun===
+====Translations====
+* Turkish: {{t|tr|borç}}`
+    expect(wiktionaryAyikla(b, true)).toEqual(['ödünç almak'])
+    expect(wiktionaryAyikla(b)).toEqual(['ödünç almak', 'borç'])
+  })
   it('İngilizce bölümü yoksa boş', () => {
     expect(wiktionaryAyikla('==French==\n* {{t|tr|ev}}')).toEqual([])
   })
