@@ -18,6 +18,9 @@ Adres: https://suzunn.github.io/dinokart/
 - **Aralıklı tekrar:** bilinen kelime 1, 3, 7, 16, 35, 90 gün sonra geri gelir; bilinmeyen başa döner
   ve aynı turda 3 kart sonra yeniden çıkar. 16+ günlük aralığa çıkan kelime "oturdu" sayılır. Tur 20 kart.
 - **Seri:** art arda çalışılan gün sayısı.
+- **Duocards'tan aktar:** app.duocards.com'dan (tarayıcıdan) inen CSV, Kelimeler sekmesinden yüklenir.
+  Ayırıcı, başlık ve sütunlar tahmin edilir, önizlemede düzeltilir; kayıtlı kelimeler atlanır; yeni kartlar
+  günde 20 tane açılır. "Cümlelerini bul" cümlesi olmayan kartlara sırayla cümle ve çeviri bulur.
 - **Yedek:** veri sadece telefonda (localStorage). Kelimeler sekmesinden JSON yedek alınır/yüklenir.
 
 ## Geliştirme

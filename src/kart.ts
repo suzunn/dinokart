@@ -47,7 +47,7 @@ export function gunAnahtari(ts: number): string {
 }
 
 // Gün ekleme saat dilimi değişiminde kaymasın diye takvim üzerinden yapılır
-function gunEkle(ts: number, gun: number): number {
+export function gunEkle(ts: number, gun: number): number {
   const d = new Date(gunBasi(ts))
   d.setDate(d.getDate() + gun)
   return d.getTime()

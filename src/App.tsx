@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import AktarSayfa from './AktarSayfa'
+import { AKTARMA_GUNLUK, type AktarilacakSatir } from './aktar'
 import Calisma from './Calisma'
+import { cevir } from './ceviri'
+import { cumleBul } from './cumle'
 import Form, { type FormAlani } from './Form'
 import { Kelime } from './KartYuz'
 import { birlestir, kaliciIste, kaydet, yedekVer, yukle, type Veri } from './depo'
-import { DILLER, DIL_SIRASI, TUR_BOYU, asama, bilemedim, bildim, gunAnahtari, seri, tekrarSirasi, yeniKart, type Dil, type Kart } from './kart'
+import { DILLER, DIL_SIRASI, TUR_BOYU, asama, bilemedim, bildim, gunAnahtari, gunEkle, seri, tekrarSirasi, yeniKart, type Dil, type Kart } from './kart'
 
 export const KULLANICI = 'Elif'
 
@@ -21,6 +25,10 @@ export default function App() {
   const [duzenle, setDuzenle] = useState<Kart | null>(null)
   const [bildirim, setBildirim] = useState<string | null>(null)
   const bildirimZaman = useRef<number>(0)
+  const [aktarAcik, setAktarAcik] = useState(false)
+  const [cumleIsi, setCumleIsi] = useState<{ bitti: number; toplam: number } | null>(null)
+  const veriRef = useRef(veri)
+  veriRef.current = veri
 
   useEffect(kaliciIste, [])
   useEffect(() => {
@@ -56,6 +64,51 @@ export default function App() {
       return { ...v, sonDil: a.dil, kartlar: [...v.kartlar, yeniKart(a, no, Date.now())] }
     })
     bildir(`Kaydedildi: ${a.kelime}`)
+  }
+
+  // İçe aktarılan kartlar günde AKTARMA_GUNLUK tanesi açılacak şekilde sıraya konur
+  const topluEkle = (satirlar: AktarilacakSatir[], dil: Dil) => {
+    const simdi = Date.now()
+    setVeri(v => {
+      let no = v.kartlar.reduce((m, k) => Math.max(m, k.no), 0)
+      const yeni = satirlar.map((r, i) => ({
+        ...yeniKart({ dil, kelime: r.kelime, anlam: r.anlam, cumle: r.cumle }, ++no, simdi + i),
+        sonraki: i < AKTARMA_GUNLUK ? simdi : gunEkle(simdi, Math.floor(i / AKTARMA_GUNLUK)),
+      }))
+      return { ...v, sonDil: dil, kartlar: [...v.kartlar, ...yeni] }
+    })
+    setAktarAcik(false)
+    bildir(`${satirlar.length} kelime eklendi`)
+  }
+
+  // Cümlesi olmayan kartlara sırayla (sitelere yüklenmeden) cümle ve çevirisi bulunur
+  const cumleleriBul = async () => {
+    if (cumleIsi) return
+    const hedef = veriRef.current.kartlar.filter(k => !k.cumle).map(k => k.id)
+    setCumleIsi({ bitti: 0, toplam: hedef.length })
+    let bulunan = 0
+    for (let i = 0; i < hedef.length; i++) {
+      const k = veriRef.current.kartlar.find(x => x.id === hedef[i])
+      if (k && !k.cumle) {
+        try {
+          const aday = (await cumleBul(k.kelime, k.dil))[0]
+          if (aday) {
+            const ceviri = aday.ceviri ?? (await cevir(aday.cumle, k.dil, false).catch(() => null))?.ana
+            bulunan++
+            setVeri(v => ({
+              ...v,
+              kartlar: v.kartlar.map(x => (x.id === k.id && !x.cumle ? { ...x, cumle: aday.cumle, cumleTr: ceviri, guncelleme: Date.now() } : x)),
+            }))
+          }
+        } catch {
+          // internet yoksa ya da site yanıt vermezse o kart atlanır
+        }
+        await new Promise(r => setTimeout(r, 350))
+      }
+      setCumleIsi({ bitti: i + 1, toplam: hedef.length })
+    }
+    setCumleIsi(null)
+    bildir(`${bulunan} karta cümle bulundu`)
   }
 
   const guncelle = (id: string, a: FormAlani) => {
@@ -101,7 +154,17 @@ export default function App() {
             <Form kartlar={veri.kartlar} ilkDil={veri.sonDil} kaydet={ekle} />
           </>
         )}
-        {sekme === 'liste' && <Liste veri={veri} sec={setDuzenle} setVeri={setVeri} bildir={bildir} />}
+        {sekme === 'liste' && (
+          <Liste
+            veri={veri}
+            sec={setDuzenle}
+            setVeri={setVeri}
+            bildir={bildir}
+            aktarAc={() => setAktarAcik(true)}
+            cumleIsi={cumleIsi}
+            cumleleriBul={cumleleriBul}
+          />
+        )}
       </main>
 
       <nav className="sekmeler">
@@ -133,6 +196,14 @@ export default function App() {
               sil={() => sil(duzenle.id)}
               vazgec={() => setDuzenle(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {aktarAcik && (
+        <div className="sayfa-arka" onClick={() => setAktarAcik(false)}>
+          <div className="sayfa" role="dialog" aria-label="Duocards'tan aktar" onClick={e => e.stopPropagation()}>
+            <AktarSayfa kartlar={veri.kartlar} aktar={topluEkle} kapat={() => setAktarAcik(false)} />
           </div>
         </div>
       )}
@@ -268,12 +339,19 @@ function Liste({
   sec,
   setVeri,
   bildir,
+  aktarAc,
+  cumleIsi,
+  cumleleriBul,
 }: {
   veri: Veri
   sec: (k: Kart) => void
   setVeri: (f: (v: Veri) => Veri) => void
   bildir: (m: string) => void
+  aktarAc: () => void
+  cumleIsi: { bitti: number; toplam: number } | null
+  cumleleriBul: () => void
 }) {
+  const cumlesiz = veri.kartlar.filter(k => !k.cumle).length
   const [ara, setAra] = useState('')
   const [dil, setDil] = useState<Dil | 'hepsi'>('hepsi')
   const dosyaEl = useRef<HTMLInputElement>(null)
@@ -333,6 +411,37 @@ function Liste({
           })}
         </ul>
       )}
+
+      <section className="yedek">
+        <h2>Başka uygulamadan</h2>
+        <p>Duocards'taki kelimelerini dosya olarak indirip buraya ekleyebilirsin.</p>
+        <div className="yedek-dugmeler">
+          <button className="dugme ikincil" onClick={aktarAc}>
+            Duocards'tan aktar
+          </button>
+        </div>
+        {(cumleIsi || cumlesiz > 0) && (
+          <div className="cumle-isi">
+            {cumleIsi ? (
+              <>
+                <p role="status">
+                  Cümleler aranıyor: {cumleIsi.bitti}/{cumleIsi.toplam}. Bu sırada uygulamayı kullanabilirsin, sadece kapatma.
+                </p>
+                <div className="ilerleme" aria-hidden="true">
+                  <i style={{ width: (cumleIsi.bitti / Math.max(cumleIsi.toplam, 1)) * 100 + '%' }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <p>{cumlesiz} kartın örnek cümlesi yok.</p>
+                <button className="dugme ikincil" onClick={cumleleriBul}>
+                  Cümlelerini bul
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="yedek">
         <h2>Yedek</h2>
