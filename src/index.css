@@ -1111,3 +1111,9 @@ button {
   color: var(--murekkep);
   font-weight: 700;
 }
+.liste-devam {
+  margin-top: 12px;
+}
+.sekmeler button {
+  max-width: 120px;
+}

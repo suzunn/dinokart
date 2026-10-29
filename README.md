@@ -19,12 +19,15 @@ Adres: https://suzunn.github.io/dinokart/
   ve aynı turda 3 kart sonra yeniden çıkar. İlk görüşte bilinen kelime doğrudan 7 günlük kutuya gider.
   7+ günlük aralığa çıkan kelime "oturdu" sayılır. Tur 20 kart.
 - **Seri:** art arda çalışılan gün sayısı.
-- **Duocards'tan aktar:** app.duocards.com'dan (tarayıcıdan) inen CSV, Kelimeler sekmesinden yüklenir.
+- **Duocards'tan aktar:** app.duocards.com'dan (tarayıcıdan) inen CSV, Ayarlar sekmesinden yüklenir.
   Ayırıcı, başlık ve sütunlar tahmin edilir, önizlemede düzeltilir; kayıtlı kelimeler atlanır; yeni kartlar
   günde 20/50/100 tane açılır. Duocards'ta anlamı İngilizce yazılmış kartlar (Türkçeye özgü harf yoksa)
-  işaretlenir; "Eksikleri tamamla" (aktarmadan sonra kendiliğinden başlar) bunların Türkçesini bulur, İngilizcesi
+  işaretlenir; "Eksikleri tamamla" (Ayarlar'da; aktarmadan sonra kendiliğinden başlar) bunların Türkçesini bulur, İngilizcesi
   notta kalır, cümlesi olmayanlara da cümle bulur.
-- **Yedek:** veri sadece telefonda (localStorage). Kelimeler sekmesinden JSON yedek alınır/yüklenir.
+- **Ayarlar sekmesi:** sürüm (derleme anı) ve "Son sürümü al" (surum.json ile karşılaştırır, yeni varsa servis
+  çalışanını günceller ve sayfayı yeniler), Duocards'tan aktar, eksikleri tamamla, JSON yedek al/yükle.
+  Veri sadece telefonda (localStorage).
+- **Kelimeler sekmesi:** arama, dil filtresi; liste 100'er kelime gösterilir.
 
 ## Geliştirme
 

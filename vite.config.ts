@@ -2,11 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Sürüm = derleme anı. Uygulamaya gömülür ve surum.json olarak yanına yazılır;
+// "Son sürümü al" ikisini karşılaştırır.
+const SURUM = new Date().toISOString()
+
 // GitHub Pages: site suzunn.github.io/dinokart/ altında yayınlanır
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/dinokart/' : '/',
+  define: { __SURUM__: JSON.stringify(SURUM) },
   plugins: [
     react(),
+    {
+      name: 'surum-dosyasi',
+      generateBundle() {
+        this.emitFile({ type: 'asset', fileName: 'surum.json', source: JSON.stringify({ surum: SURUM }) })
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false, // kayıt src/main.tsx'te: yeni sürüm gelince sayfa kendiliğinden yenilensin

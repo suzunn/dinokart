@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import AktarSayfa from './AktarSayfa'
+import Ayarlar from './Ayarlar'
 import { ingilizceGibi, type AktarilacakSatir } from './aktar'
 import Calisma from './Calisma'
 import { cevir } from './ceviri'
 import { cumleBul } from './cumle'
 import Form, { type FormAlani } from './Form'
 import { Kelime } from './KartYuz'
-import { birlestir, kaliciIste, kaydet, yedekVer, yukle, type Veri } from './depo'
+import { kaliciIste, kaydet, yukle, type Veri } from './depo'
 import { DILLER, DIL_SIRASI, TUR_BOYU, asama, bilemedim, bildim, gunAnahtari, gunEkle, kelimeAnahtari, seri, tekrarSirasi, yeniKart, type Dil, type Kart } from './kart'
 
 export const KULLANICI = 'Elif'
 
-type Sekme = 'calis' | 'ekle' | 'liste'
+type Sekme = 'calis' | 'ekle' | 'liste' | 'ayarlar'
 
 const iosTarayicida = () =>
   /iphone|ipad|ipod/i.test(navigator.userAgent) &&
@@ -200,10 +201,10 @@ export default function App() {
             <Form kartlar={veri.kartlar} ilkDil={veri.sonDil} kaydet={ekle} />
           </>
         )}
-        {sekme === 'liste' && (
-          <Liste
+        {sekme === 'liste' && <Liste veri={veri} sec={setDuzenle} />}
+        {sekme === 'ayarlar' && (
+          <Ayarlar
             veri={veri}
-            sec={setDuzenle}
             setVeri={setVeri}
             bildir={bildir}
             aktarAc={() => setAktarAcik(true)}
@@ -219,6 +220,7 @@ export default function App() {
             ['calis', 'Çalış'],
             ['ekle', 'Ekle'],
             ['liste', 'Kelimeler'],
+            ['ayarlar', 'Ayarlar'],
           ] as [Sekme, string][]
         ).map(([s, ad]) => (
           <button key={s} className={sekme === s ? 'secili' : ''} aria-current={sekme === s ? 'page' : undefined} onClick={() => setSekme(s)}>
@@ -277,6 +279,14 @@ function SekmeIkon({ s }: { s: Sekme }) {
       <svg {...ortak}>
         <circle cx="12" cy="12" r="8.5" />
         <path d="M12 8v8M8 12h8" />
+      </svg>
+    )
+  if (s === 'ayarlar')
+    return (
+      <svg {...ortak}>
+        <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+        <circle cx="15" cy="7" r="2" />
+        <circle cx="9" cy="17" r="2" />
       </svg>
     )
   return (
@@ -386,28 +396,13 @@ function Ana({ veri, basla, ekle }: { veri: Veri; basla: (dil?: Dil) => void; ek
 
 const ASAMA_AD = { yeni: 'Yeni', ogreniyor: 'Öğreniyor', oturdu: 'Oturdu' }
 
-function Liste({
-  veri,
-  sec,
-  setVeri,
-  bildir,
-  aktarAc,
-  cumleIsi,
-  eksikleriTamamla,
-}: {
-  veri: Veri
-  sec: (k: Kart) => void
-  setVeri: (f: (v: Veri) => Veri) => void
-  bildir: (m: string) => void
-  aktarAc: () => void
-  cumleIsi: { bitti: number; toplam: number } | null
-  eksikleriTamamla: () => void
-}) {
-  const cumlesiz = veri.kartlar.filter(k => !k.cumle).length
-  const ingilizce = veri.kartlar.filter(k => k.ceviriBekliyor).length
+// Binlerce kelimede telefon yavaşlamasın diye liste parça parça gösterilir
+const LISTE_PARCA = 100
+
+function Liste({ veri, sec }: { veri: Veri; sec: (k: Kart) => void }) {
   const [ara, setAra] = useState('')
   const [dil, setDil] = useState<Dil | 'hepsi'>('hepsi')
-  const dosyaEl = useRef<HTMLInputElement>(null)
+  const [gosterilen, setGosterilen] = useState(LISTE_PARCA)
 
   const liste = useMemo(() => {
     const q = ara.trim().toLocaleLowerCase('tr')
@@ -416,17 +411,6 @@ function Liste({
       .sort((a, b) => b.no - a.no)
   }, [veri.kartlar, ara, dil])
 
-  const yedekYukle = async (f: File) => {
-    try {
-      const gelen = JSON.parse(await f.text()) as Partial<Veri>
-      if (!Array.isArray(gelen.kartlar)) throw new Error()
-      setVeri(v => birlestir(v, gelen))
-      bildir(`Yedek yüklendi: ${gelen.kartlar.length} kart`)
-    } catch {
-      bildir('Bu dosya bir Dinokart yedeği değil')
-    }
-  }
-
   return (
     <>
       <header className="baslik">
@@ -434,10 +418,26 @@ function Liste({
         <p className="baslik-alt">{veri.kartlar.length} kart</p>
       </header>
 
-      <input className="arama" type="search" value={ara} onChange={e => setAra(e.target.value)} placeholder="Kelime ya da anlam ara" />
+      <input
+        className="arama"
+        type="search"
+        value={ara}
+        onChange={e => {
+          setAra(e.target.value)
+          setGosterilen(LISTE_PARCA)
+        }}
+        placeholder="Kelime ya da anlam ara"
+      />
       <div className="filtre">
         {(['hepsi', ...DIL_SIRASI] as const).map(d => (
-          <button key={d} className={dil === d ? 'secili' : ''} onClick={() => setDil(d)}>
+          <button
+            key={d}
+            className={dil === d ? 'secili' : ''}
+            onClick={() => {
+              setDil(d)
+              setGosterilen(LISTE_PARCA)
+            }}
+          >
             {d === 'hepsi' ? 'Hepsi' : DILLER[d].bayrak + ' ' + DILLER[d].ad}
           </button>
         ))}
@@ -447,7 +447,7 @@ function Liste({
         <p className="liste-bos">{veri.kartlar.length ? 'Aramaya uyan kelime yok.' : 'Eklediğin kelimeler burada listelenir.'}</p>
       ) : (
         <ul className="liste">
-          {liste.map(k => {
+          {liste.slice(0, gosterilen).map(k => {
             const a = asama(k)
             return (
               <li key={k.id}>
@@ -464,74 +464,12 @@ function Liste({
           })}
         </ul>
       )}
+      {liste.length > gosterilen && (
+        <button className="dugme ikincil genis liste-devam" onClick={() => setGosterilen(g => g + LISTE_PARCA)}>
+          {Math.min(LISTE_PARCA, liste.length - gosterilen)} kelime daha göster ({liste.length - gosterilen} kaldı)
+        </button>
+      )}
 
-      <section className="yedek">
-        <h2>Başka uygulamadan</h2>
-        <p>Duocards'taki kelimelerini dosya olarak indirip buraya ekleyebilirsin.</p>
-        <div className="yedek-dugmeler">
-          <button className="dugme ikincil" onClick={aktarAc}>
-            Duocards'tan aktar
-          </button>
-        </div>
-        {(cumleIsi || cumlesiz > 0 || ingilizce > 0) && (
-          <div className="cumle-isi">
-            {cumleIsi ? (
-              <>
-                <p role="status">
-                  Kartlar tamamlanıyor: {cumleIsi.bitti}/{cumleIsi.toplam}. Bu sırada uygulamayı kullanabilirsin, sadece kapatma;
-                  kapanırsa kaldığı yerden devam ettirebilirsin.
-                </p>
-                <div className="ilerleme" aria-hidden="true">
-                  <i style={{ width: (cumleIsi.bitti / Math.max(cumleIsi.toplam, 1)) * 100 + '%' }} />
-                </div>
-              </>
-            ) : (
-              <>
-                <p>
-                  {[cumlesiz > 0 && `${cumlesiz} kartın örnek cümlesi yok`, ingilizce > 0 && `${ingilizce} kartın anlamı İngilizce`]
-                    .filter(Boolean)
-                    .join(', ')}
-                  .
-                </p>
-                <button className="dugme ikincil" onClick={eksikleriTamamla}>
-                  Eksikleri tamamla
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="yedek">
-        <h2>Yedek</h2>
-        <p>Kelimeler sadece bu telefonda duruyor. Arada bir yedek alıp Dosyalar'a ya da iCloud'a kaydet.</p>
-        <div className="yedek-dugmeler">
-          <button
-            className="dugme ikincil"
-            disabled={!veri.kartlar.length}
-            onClick={async () => {
-              const s = await yedekVer(veri)
-              if (s !== 'iptal') bildir('Yedek hazır')
-            }}
-          >
-            Yedek al
-          </button>
-          <button className="dugme ikincil" onClick={() => dosyaEl.current?.click()}>
-            Yedekten yükle
-          </button>
-          <input
-            ref={dosyaEl}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={e => {
-              const f = e.target.files?.[0]
-              if (f) yedekYukle(f)
-              e.target.value = ''
-            }}
-          />
-        </div>
-      </section>
     </>
   )
 }
