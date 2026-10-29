@@ -70,6 +70,9 @@ export function bilemedim(k: Kart, simdi: number): Kart {
 
 export const vakti = (k: Kart, simdi: number) => k.sonraki <= simdi
 
+// Aynı kelimeyi tanımak için (tekrar ekleme uyarısı, içe aktarmada atlama, silinenler listesi)
+export const kelimeAnahtari = (dil: Dil, kelime: string) => dil + ':' + kelime.trim().toLocaleLowerCase()
+
 // Önce gecikenler (en eski önce), sonra yeniler (eklenme sırasıyla)
 export function tekrarSirasi(kartlar: Kart[], simdi: number, dil?: Dil): Kart[] {
   return kartlar

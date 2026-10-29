@@ -1,11 +1,12 @@
 // Telefonda saklama (localStorage) ve yedek dosyası.
-import { ilkBildimDuzelt, type Dil, type Kart } from './kart'
+import { ilkBildimDuzelt, kelimeAnahtari, type Dil, type Kart } from './kart'
 
 export interface Veri {
   surum: 2
   kartlar: Kart[]
   gunler: string[] // çalışılan günler, YYYY-MM-DD
   sonDil: Dil
+  silinenler?: string[] // çalışırken "çok kolay" diye silinen kelimeler (kelimeAnahtari); içe aktarmada geri gelmesinler
 }
 
 const ANAHTAR = 'dinokart.v1'
@@ -48,7 +49,10 @@ export function birlestir(eldeki: Veri, gelen: Partial<Veri>): Veri {
     if (!e || k.guncelleme > e.guncelleme) harita.set(k.id, k)
   }
   const gunler = [...new Set([...eldeki.gunler, ...(gelen.gunler ?? [])])].sort()
-  return { ...eldeki, kartlar: [...harita.values()].sort((a, b) => a.no - b.no), gunler }
+  const silinenler = [...new Set([...(eldeki.silinenler ?? []), ...(gelen.silinenler ?? [])])]
+  const silinmis = new Set(silinenler)
+  const kartlar = [...harita.values()].filter(k => !silinmis.has(kelimeAnahtari(k.dil, k.kelime))).sort((a, b) => a.no - b.no)
+  return { ...eldeki, kartlar, gunler, silinenler }
 }
 
 export async function yedekVer(v: Veri): Promise<'paylasildi' | 'indirildi' | 'iptal'> {

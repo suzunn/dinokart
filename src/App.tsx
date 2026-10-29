@@ -7,7 +7,7 @@ import { cumleBul } from './cumle'
 import Form, { type FormAlani } from './Form'
 import { Kelime } from './KartYuz'
 import { birlestir, kaliciIste, kaydet, yedekVer, yukle, type Veri } from './depo'
-import { DILLER, DIL_SIRASI, TUR_BOYU, asama, bilemedim, bildim, gunAnahtari, gunEkle, seri, tekrarSirasi, yeniKart, type Dil, type Kart } from './kart'
+import { DILLER, DIL_SIRASI, TUR_BOYU, asama, bilemedim, bildim, gunAnahtari, gunEkle, kelimeAnahtari, seri, tekrarSirasi, yeniKart, type Dil, type Kart } from './kart'
 
 export const KULLANICI = 'Elif'
 
@@ -154,6 +154,24 @@ export default function App() {
     bildir('Kart silindi')
   }
 
+  // Çalışırken aşağı kaydırılan kart: kayıttan tamamen çıkar ve bir daha içe aktarılmaz
+  const kolaySil = (k: Kart) => {
+    const a = kelimeAnahtari(k.dil, k.kelime)
+    setVeri(v => ({
+      ...v,
+      kartlar: v.kartlar.filter(x => x.id !== k.id),
+      silinenler: v.silinenler?.includes(a) ? v.silinenler : [...(v.silinenler ?? []), a],
+    }))
+  }
+  const silmeyiGeriAl = (k: Kart) => {
+    const a = kelimeAnahtari(k.dil, k.kelime)
+    setVeri(v => ({
+      ...v,
+      kartlar: v.kartlar.some(x => x.id === k.id) ? v.kartlar : [...v.kartlar, k].sort((x, y) => x.no - y.no),
+      silinenler: (v.silinenler ?? []).filter(x => x !== a),
+    }))
+  }
+
   if (tur) {
     return (
       <Calisma
@@ -161,6 +179,8 @@ export default function App() {
         ilkSira={tur.sira}
         kartlar={veri.kartlar}
         isle={isle}
+        sil={kolaySil}
+        geriAl={silmeyiGeriAl}
         kapat={() => setTur(null)}
         devamVar={tekrarSirasi(veri.kartlar, Date.now(), tur.dil).length > 0}
         devam={() => turBaslat(tur.dil)}
@@ -229,7 +249,7 @@ export default function App() {
       {aktarAcik && (
         <div className="sayfa-arka" onClick={() => setAktarAcik(false)}>
           <div className="sayfa" role="dialog" aria-label="Duocards'tan aktar" onClick={e => e.stopPropagation()}>
-            <AktarSayfa kartlar={veri.kartlar} aktar={topluEkle} kapat={() => setAktarAcik(false)} />
+            <AktarSayfa kartlar={veri.kartlar} silinenler={veri.silinenler ?? []} aktar={topluEkle} kapat={() => setAktarAcik(false)} />
           </div>
         </div>
       )}

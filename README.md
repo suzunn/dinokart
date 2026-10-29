@@ -12,7 +12,8 @@ Adres: https://suzunn.github.io/dinokart/
   [Tatoeba](https://tatoeba.org) verir; Türkçesi yoksa o da çevrilir (Google, olmazsa MyMemory).
   Tureng denendi ama Cloudflare bot koruması otomatik istekleri geri çeviriyor.
 - **Kart:** önde kelime + altında cümle (kelime vurgulu), arkada Türkçesi. Dokun = çevir.
-  Sağa kaydır = bildim, sola = tekrar gelsin. Hoparlör = telefonun sesiyle okuma.
+  Sağa kaydır = bildim, sola = tekrar gelsin, aşağı = çok kolay: kart tamamen silinir (6 sn geri alınabilir),
+  kelime `silinenler` listesine girer ve içe aktarmada ya da yedekten bir daha gelmez. Hoparlör = telefonun sesiyle okuma.
 - **Artikel renkleri:** der/le mavi, die/la kırmızı, das yeşil.
 - **Aralıklı tekrar:** bilinen kelime 1, 3, 7, 16, 35, 90 gün sonra geri gelir; bilinmeyen başa döner
   ve aynı turda 3 kart sonra yeniden çıkar. İlk görüşte bilinen kelime doğrudan 7 günlük kutuya gider.

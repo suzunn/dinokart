@@ -2,16 +2,17 @@
 import { useMemo, useRef, useState } from 'react'
 import { AKTARMA_GUNLUK_SECENEK, eslesmeTahmin, ingilizceGibi, metneCevir, satirlariAl, tabloyaCevir, type AktarilacakSatir, type Eslesme, type Tablo } from './aktar'
 import { Kelime } from './KartYuz'
-import { DILLER, DIL_SIRASI, type Dil, type Kart } from './kart'
+import { DILLER, DIL_SIRASI, kelimeAnahtari as anahtar, type Dil, type Kart } from './kart'
 
-export const anahtar = (dil: Dil, kelime: string) => dil + ':' + kelime.trim().toLocaleLowerCase()
 
 export default function AktarSayfa({
   kartlar,
+  silinenler,
   aktar,
   kapat,
 }: {
   kartlar: Kart[]
+  silinenler: string[]
   aktar: (satirlar: AktarilacakSatir[], dil: Dil, gunluk: number, turkceyeCevir: boolean) => void
   kapat: () => void
 }) {
@@ -37,16 +38,18 @@ export default function AktarSayfa({
 
   const satirlar = useMemo(() => (tablo ? satirlariAl(tablo, eslesme) : []), [tablo, eslesme])
   const mevcut = useMemo(() => new Set(kartlar.map(k => anahtar(k.dil, k.kelime))), [kartlar])
+  const silinmis = useMemo(() => new Set(silinenler), [silinenler])
   const yeni = useMemo(() => {
     if (!dil) return satirlar
     const gorulen = new Set<string>()
     return satirlar.filter(r => {
       const a = anahtar(dil, r.kelime)
-      if (mevcut.has(a) || gorulen.has(a)) return false
+      if (mevcut.has(a) || silinmis.has(a) || gorulen.has(a)) return false
       gorulen.add(a)
       return true
     })
-  }, [satirlar, dil, mevcut])
+  }, [satirlar, dil, mevcut, silinmis])
+  const silinmisSay = dil ? satirlar.filter(r => silinmis.has(anahtar(dil, r.kelime))).length : 0
 
   const sutunSay = tablo ? Math.max(...tablo.satirlar.slice(0, 20).map(r => r.length)) : 0
   const sutunAdi = (i: number) => {
@@ -151,7 +154,9 @@ export default function AktarSayfa({
 
           <p className="alan-not">
             {satirlar.length} kelime bulundu
-            {dil && satirlar.length !== yeni.length && <>, {satirlar.length - yeni.length} tanesi zaten var (atlanacak)</>}.
+            {dil && satirlar.length - yeni.length - silinmisSay > 0 && <>, {satirlar.length - yeni.length - silinmisSay} tanesi zaten var</>}
+            {silinmisSay > 0 && <>, {silinmisSay} tanesini "çok kolay" diye silmiştin</>}
+            {dil && satirlar.length !== yeni.length && ' (bunlar atlanacak)'}.
           </p>
 
           {ingilizceSay > 0 && (
