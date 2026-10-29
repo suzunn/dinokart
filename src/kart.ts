@@ -32,7 +32,10 @@ export const DIL_SIRASI: Dil[] = ['en', 'de', 'fr']
 // Kutu başına bir sonraki tekrara kadar gün sayısı
 export const ARALIK_GUN = [0, 1, 3, 7, 16, 35, 90]
 export const KUTU_TAVAN = ARALIK_GUN.length - 1
-export const OTURDU_KUTU = 4 // 16+ günlük aralığa çıkan kelime "oturdu" sayılır
+export const OTURDU_KUTU = 3 // bir haftalık (7+ gün) aralığa çıkan kelime "oturdu" sayılır
+// İlk görüşte bilinen kelime zaten biliniyordu (Duocards'tan gelenler gibi): 1 ve 3 gün sonra sormak boşa,
+// doğrudan haftalık kutuya gider
+export const ILK_BILDIM_KUTU = 3
 export const TUR_BOYU = 20
 
 
@@ -55,7 +58,8 @@ export function gunEkle(ts: number, gun: number): number {
 }
 
 export function bildim(k: Kart, simdi: number): Kart {
-  const kutu = Math.min(k.kutu + 1, KUTU_TAVAN)
+  const ilkKez = k.dogru + k.yanlis === 0
+  const kutu = Math.min(ilkKez ? ILK_BILDIM_KUTU : k.kutu + 1, KUTU_TAVAN)
   return { ...k, kutu, sonraki: gunEkle(simdi, ARALIK_GUN[kutu]), dogru: k.dogru + 1, guncelleme: simdi }
 }
 
@@ -76,6 +80,14 @@ export function tekrarSirasi(kartlar: Kart[], simdi: number, dil?: Dil): Kart[] 
       if (ay !== by) return ay ? 1 : -1
       return ay ? a.olusturma - b.olusturma : a.sonraki - b.sonraki
     })
+}
+
+// Eski kayıtlar için: hiç yanılmadan bilinmiş ama kutusu ILK_BILDIM_KUTU'nun altında kalmış kart (ilk sürüm
+// ilk görüşte bilineni de 1 gün sonra soruyordu) haftalık kutuya alınır; sıradaki tarih son görülmeden 7 gün sonra
+export function ilkBildimDuzelt(k: Kart): Kart {
+  if (k.yanlis !== 0 || k.dogru < 1 || k.kutu >= ILK_BILDIM_KUTU) return k
+  const sonGorulme = gunEkle(k.sonraki, -ARALIK_GUN[k.kutu])
+  return { ...k, kutu: ILK_BILDIM_KUTU, sonraki: Math.max(k.sonraki, gunEkle(sonGorulme, ARALIK_GUN[ILK_BILDIM_KUTU])) }
 }
 
 export type Asama = 'yeni' | 'ogreniyor' | 'oturdu'

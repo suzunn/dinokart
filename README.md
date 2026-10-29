@@ -15,7 +15,8 @@ Adres: https://suzunn.github.io/dinokart/
   Sağa kaydır = bildim, sola = tekrar gelsin. Hoparlör = telefonun sesiyle okuma.
 - **Artikel renkleri:** der/le mavi, die/la kırmızı, das yeşil.
 - **Aralıklı tekrar:** bilinen kelime 1, 3, 7, 16, 35, 90 gün sonra geri gelir; bilinmeyen başa döner
-  ve aynı turda 3 kart sonra yeniden çıkar. 16+ günlük aralığa çıkan kelime "oturdu" sayılır. Tur 20 kart.
+  ve aynı turda 3 kart sonra yeniden çıkar. İlk görüşte bilinen kelime doğrudan 7 günlük kutuya gider.
+  7+ günlük aralığa çıkan kelime "oturdu" sayılır. Tur 20 kart.
 - **Seri:** art arda çalışılan gün sayısı.
 - **Duocards'tan aktar:** app.duocards.com'dan (tarayıcıdan) inen CSV, Kelimeler sekmesinden yüklenir.
   Ayırıcı, başlık ve sütunlar tahmin edilir, önizlemede düzeltilir; kayıtlı kelimeler atlanır; yeni kartlar

@@ -1,22 +1,25 @@
 // Telefonda saklama (localStorage) ve yedek dosyası.
-import type { Dil, Kart } from './kart'
+import { ilkBildimDuzelt, type Dil, type Kart } from './kart'
 
 export interface Veri {
-  surum: 1
+  surum: 2
   kartlar: Kart[]
   gunler: string[] // çalışılan günler, YYYY-MM-DD
   sonDil: Dil
 }
 
 const ANAHTAR = 'dinokart.v1'
-const BOS: Veri = { surum: 1, kartlar: [], gunler: [], sonDil: 'en' }
+const BOS: Veri = { surum: 2, kartlar: [], gunler: [], sonDil: 'en' }
+
+// Sürüm 1 -> 2: ilk görüşte bilinen kartlar haftalık kutuya (kart.ts ilkBildimDuzelt)
+const surumeGetir = (kartlar: Kart[], surum: unknown) => (surum === 2 ? kartlar : kartlar.map(ilkBildimDuzelt))
 
 export function yukle(): Veri {
   try {
     const ham = localStorage.getItem(ANAHTAR)
     if (!ham) return BOS
     const v = JSON.parse(ham) as Partial<Veri>
-    return { ...BOS, ...v, kartlar: Array.isArray(v.kartlar) ? v.kartlar : [] }
+    return { ...BOS, ...v, surum: 2, kartlar: surumeGetir(Array.isArray(v.kartlar) ? v.kartlar : [], v.surum) }
   } catch {
     return BOS
   }
@@ -39,7 +42,7 @@ export function kaliciIste() {
 // Yedekten gelen kartlar eldekilerle id üzerinden birleşir; çakışmada yeni güncellenen kazanır
 export function birlestir(eldeki: Veri, gelen: Partial<Veri>): Veri {
   const harita = new Map(eldeki.kartlar.map(k => [k.id, k]))
-  for (const k of gelen.kartlar ?? []) {
+  for (const k of surumeGetir(gelen.kartlar ?? [], gelen.surum)) {
     if (!k?.id || !k.kelime) continue
     const e = harita.get(k.id)
     if (!e || k.guncelleme > e.guncelleme) harita.set(k.id, k)

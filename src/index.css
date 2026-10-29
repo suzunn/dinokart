@@ -277,6 +277,7 @@ button {
   color: var(--soluk);
 }
 .dil-cubuk {
+  display: flex;
   margin-top: 7px;
   height: 4px;
   border-radius: 4px;
@@ -287,6 +288,14 @@ button {
   display: block;
   height: 100%;
   background: var(--dil);
+}
+.dil-cubuk i.ogreniyor {
+  background: color-mix(in srgb, var(--dil) 35%, transparent);
+}
+.aciklama {
+  margin: 14px 4px 0;
+  font-size: 0.82rem;
+  color: var(--soluk);
 }
 .dil-vakti {
   font-family: var(--serif);

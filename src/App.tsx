@@ -329,6 +329,7 @@ function Ana({ veri, basla, ekle }: { veri: Veri; basla: (dil?: Dil) => void; ek
               const hepsi = veri.kartlar.filter(k => k.dil === d)
               const vakti = bekleyen.filter(k => k.dil === d).length
               const oturdu = hepsi.filter(k => asama(k) === 'oturdu').length
+              const ogreniyor = hepsi.filter(k => asama(k) === 'ogreniyor').length
               return (
                 <button key={d} className={`dil-satir dil-${d}`} disabled={!vakti} onClick={() => basla(d)}>
                   <span className="dil-bayrak" aria-hidden="true">
@@ -337,11 +338,12 @@ function Ana({ veri, basla, ekle }: { veri: Veri; basla: (dil?: Dil) => void; ek
                   <span className="dil-bilgi">
                     <span className="dil-ad">{DILLER[d].ad}</span>
                     <span className="dil-alt">
-                      {hepsi.length ? `${hepsi.length} kelime, ${oturdu} tanesi oturdu` : 'Henüz kelime yok'}
+                      {hepsi.length ? `${hepsi.length} kelime: ${oturdu} oturdu, ${ogreniyor} öğreniyor` : 'Henüz kelime yok'}
                     </span>
                     {hepsi.length > 0 && (
                       <span className="dil-cubuk" aria-hidden="true">
                         <i style={{ width: (oturdu / hepsi.length) * 100 + '%' }} />
+                        <i className="ogreniyor" style={{ width: (ogreniyor / hepsi.length) * 100 + '%' }} />
                       </span>
                     )}
                   </span>
@@ -350,6 +352,10 @@ function Ana({ veri, basla, ekle }: { veri: Veri; basla: (dil?: Dil) => void; ek
               )
             })}
           </section>
+          <p className="aciklama">
+            Oturdu: artık haftada bir sorulacak kadar iyi bildiğin kelime. İlk görüşte bildiğin kelime hemen oturur;
+            yanıldığın kelime birkaç gün arayla bilince oturur.
+          </p>
         </>
       )}
     </>

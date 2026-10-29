@@ -5,3 +5,6 @@ dev-dist
 
 # Local Netlify folder
 .netlify
+
+# Yerel onizleme ayari
+.claude

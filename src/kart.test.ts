@@ -1,19 +1,44 @@
 import { describe, expect, it } from 'vitest'
-import { ARALIK_GUN, KUTU_TAVAN, asama, bilemedim, bildim, cinsiyet, cumleSec, gunAnahtari, gunBasi, kok, seri, tekrarSirasi, vurgula, yeniKart } from './kart'
+import { ARALIK_GUN, ILK_BILDIM_KUTU, KUTU_TAVAN, asama, bilemedim, bildim, ilkBildimDuzelt, cinsiyet, cumleSec, gunAnahtari, gunBasi, kok, seri, tekrarSirasi, vurgula, yeniKart } from './kart'
 
 const T = new Date(2026, 9, 24, 14, 30).getTime()
 const kart = (ek: Partial<ReturnType<typeof yeniKart>> = {}) => ({ ...yeniKart({ dil: 'de', kelime: 'das Fenster', anlam: 'pencere' }, 1, T), ...ek })
 
 describe('aralıklı tekrar', () => {
-  it('bildim bir kutu ilerletir ve ertesi günün başına atar', () => {
+  it('ilk görüşte bilinen kelime doğrudan haftalık kutuya gider', () => {
     const k = bildim(kart(), T)
+    expect(k.kutu).toBe(ILK_BILDIM_KUTU)
+    expect(k.sonraki).toBe(new Date(2026, 9, 31).getTime())
+    expect(asama(k)).toBe('oturdu')
+  })
+
+  it('önce yanılıp sonra bilinen kelime küçük adımla ilerler', () => {
+    const k = bildim(bilemedim(kart(), T), T)
+    expect(k.kutu).toBe(1)
+    expect(asama(k)).toBe('ogreniyor')
+  })
+
+  it('bildim bir kutu ilerletir ve ertesi günün başına atar', () => {
+    const k = bildim(kart({ kutu: 0, yanlis: 1 }), T)
     expect(k.kutu).toBe(1)
     expect(k.sonraki).toBe(new Date(2026, 9, 25).getTime())
     expect(k.dogru).toBe(1)
   })
 
+  it('eski kayıt düzeltmesi: hiç yanılmadan bilinen kart haftalık kutuya, tarih son görülmeden 7 gün sonra', () => {
+    // 22 Ekim'de ilk kez bilinmiş, eski kurala göre 23 Ekim'de sorulacaktı
+    const eski = kart({ kutu: 1, dogru: 1, sonraki: new Date(2026, 9, 23).getTime() })
+    const d = ilkBildimDuzelt(eski)
+    expect(d.kutu).toBe(ILK_BILDIM_KUTU)
+    expect(d.sonraki).toBe(new Date(2026, 9, 29).getTime())
+    const yanilmis = kart({ kutu: 1, dogru: 2, yanlis: 1 })
+    expect(ilkBildimDuzelt(yanilmis)).toBe(yanilmis)
+    const yeni = kart()
+    expect(ilkBildimDuzelt(yeni)).toBe(yeni)
+  })
+
   it('kutu tavanı aşılmaz', () => {
-    const k = bildim(kart({ kutu: KUTU_TAVAN }), T)
+    const k = bildim(kart({ kutu: KUTU_TAVAN, dogru: 6 }), T)
     expect(k.kutu).toBe(KUTU_TAVAN)
     expect(k.sonraki).toBe(new Date(2026, 9, 24 + ARALIK_GUN[KUTU_TAVAN]).getTime())
   })
@@ -38,7 +63,8 @@ describe('aralıklı tekrar', () => {
   it('aşamalar', () => {
     expect(asama(kart())).toBe('yeni')
     expect(asama(kart({ kutu: 1, dogru: 1 }))).toBe('ogreniyor')
-    expect(asama(kart({ kutu: 4, dogru: 4 }))).toBe('oturdu')
+    expect(asama(kart({ kutu: 2, dogru: 2 }))).toBe('ogreniyor')
+    expect(asama(kart({ kutu: 3, dogru: 3 }))).toBe('oturdu')
   })
 })
 
